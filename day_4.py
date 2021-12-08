@@ -81,7 +81,7 @@ def play_bingo(bingo_grids, inputs):
 
 
 
-def loose_bingo(bingo_grids, inputs):
+def lose_bingo(bingo_grids, inputs):
     boards_to_win = len(bingo_grids)
 
     copied_bingo_grids = deepcopy(bingo_grids)
@@ -112,4 +112,4 @@ if __name__ == "__main__":
     inputs, bingo_grids = parse_bingo(file_name)
 
     print(play_bingo(bingo_grids, inputs))
-    print(loose_bingo(bingo_grids, inputs))
+    print(lose_bingo(bingo_grids, inputs))
