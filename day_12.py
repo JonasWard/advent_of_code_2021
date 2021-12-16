@@ -22,27 +22,40 @@ def is_small(node):
 
 class Path:
     def __init__(self, start_node, end_node, all_nodes):
+        self.start_node = start_node
         self.nodes = [start_node]
         self.end_node = end_node
         self.reference = all_nodes
 
+        self.has_gone_through_small_one_twice = False
+
     def clone(self):
-        n_path = Path(None, self.end_node, self.reference)
+        n_path = Path(self.start_node, self.end_node, self.reference)
         n_path.nodes = self.nodes[:]
+        n_path.has_gone_through_small_one_twice = self.has_gone_through_small_one_twice
         return n_path
 
     def add_node(self, new_node):
+        if new_node.islower() and new_node in self.nodes:
+            self.has_gone_through_small_one_twice = True
         self.nodes.append(new_node)
 
     def next_nodes(self):
-        return self.reference[self.nodes[0]]
+        return self.reference[self.nodes[-1]]
 
     def valid_next(self):
         valid_nodes = []
-        for next_node in self.next_nodes():
-            if not(next_node.islower() and next_node in self.nodes):
-                valid_nodes.append(next_node)
+        if self.has_gone_through_small_one_twice:
+            for next_node in self.next_nodes():
+                if not(next_node.islower() and next_node in self.nodes):
+                    valid_nodes.append(next_node)
 
+        else:
+            valid_nodes = []
+            for next_node in self.next_nodes():
+                if not(next_node == self.start_node):
+                    valid_nodes.append(next_node)
+        
         return valid_nodes
 
 
@@ -58,16 +71,18 @@ def find_paths(start_node, end_node, all_nodes):
 
     final_paths = []
 
-    n_paths = []
+    
     while found_new:
+        n_paths = []
+
         # print("I am here")
         for path in paths:
-            # print(path)
-            print(path.valid_next())
 
             for new_node in path.valid_next():
                 n_path = path.clone()
                 n_path.add_node(new_node)
+
+                # i+=1
 
                 if new_node == end_node:
                     final_paths.append(n_path)
@@ -82,20 +97,20 @@ def find_paths(start_node, end_node, all_nodes):
 
         i+=1
 
-        if i > 10:
+        if i > 1000:
             print("exeded iteration count")
             if path_length == len(n_paths):
                 found_new = False
 
         path_length =  len(n_paths)
 
-    return paths
+    return final_paths
 
 
 if __name__ == "__main__":
     edges_tuples = []
 
-    with open("/Users/jonas/Documents/reps/advent_of_code_2021/data/day_12.txt", 'r') as data_file:
+    with open("/Users/jonasvandenbulcke/Documents/reps/advent_of_code_2021/data/day_12.txt", 'r') as data_file:
         edges_tuples = [tuple(row.split('-')) for row in data_file.read().split('\n')]
 
     nodes = construct_graph(edges_tuples)
@@ -105,3 +120,5 @@ if __name__ == "__main__":
     print("here?")
 
     paths_found = find_paths('start', 'end', nodes)
+
+    print(len(paths_found))
