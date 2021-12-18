@@ -1,6 +1,3 @@
-from math import floor
-
-
 class Package:
     def __init__(self, version, id, string):
         self.version = version
@@ -10,27 +7,54 @@ class Package:
         else:
             self.data, self.remainder = Package.package_string_parser(string)
     
-    @property
     def value(self):
         if self.id == 4:
             return int(self.data, 2)
-        else:
-            return None
+        elif self.id == 0:
+            return sum(d.value() for d in self.data)
+        elif self.id == 1:
+            value = 1
+            for d in self.data:
+                value *= d.value() * 1
+            return value
+        elif self.id == 2:
+            return min(d.value() for d in self.data)
+        elif self.id == 3:
+            return max(d.value() for d in self.data)
+        elif self.id == 5:
+            if len(self.data) > 1:
+                return int(self.data[0].value() > self.data[1].value())
+            else:
+                print("non complete entry")
+                return 0
+        elif self.id == 6:
+            if len(self.data) > 1:
+                return int(self.data[0].value() < self.data[1].value())
+            else:
+                print("non complete entry")
+                return 0
+        elif self.id == 7:
+            if len(self.data) > 1:
+                return int(self.data[0].value() == self.data[1].value())
+            else:
+                print("non complete entry")
+                return 0
 
     def to_json(self):
         if self.id == 4:
             return {
-                'version': self.version,
-                'id': self.id,
-                'data': self.id,
-                'value': self.value
+                "version": self.version,
+                "id": self.id,
+                "data": self.data,
+                "value": self.value()
             }
 
         else:
             return {
-                'version': self.version,
-                'id': self.id,
-                'data': self.id
+                "version": self.version,
+                "id": self.id,
+                "data": [o.to_json() for o in self.data],
+                "value": self.value()
             }
 
     @staticmethod
@@ -43,6 +67,8 @@ class Package:
             active_string = string[12:]
 
             for i in range(package_count):
+                if not(Package.bit_string_is_valid_package(active_string)): 
+                    break
                 new_package = Package.from_bit_string(active_string)
                 packages.append(new_package)
                 active_string = new_package.remainder
@@ -55,12 +81,18 @@ class Package:
                 new_package = Package.from_bit_string(active_string)
                 packages.append(new_package)
                 active_string = new_package.remainder
+            
+        if active_string == '0000000':
+            print("added a '0000000' string")
+            new_package = Package(0, 0, '00000')
+            packages.append(new_package)
+            active_string = ''
 
         return packages, active_string
 
     @staticmethod
     def value_string_parser(string):
-        data = ''
+        data = ""
         
         while len(string) > 4:
             data += string[1:5]
@@ -71,7 +103,7 @@ class Package:
             if start_bit == '0':
                 break
         
-        return int(data, 2), string
+        return data, string
 
     @staticmethod
     def from_bit_string(bit_string):
@@ -84,6 +116,15 @@ class Package:
     @staticmethod
     def bit_string_is_valid_package(bit_string):
         return len(bit_string) > 10
+
+    @staticmethod
+    def version_counter(data_object):
+        v_cnt = data_object.version
+        if data_object.id != 4:
+            for sub_p in data_object.data:
+                v_cnt += Package.version_counter(sub_p)
+
+        return v_cnt
 
 
 HEX_MAP = {
@@ -105,72 +146,14 @@ HEX_MAP = {
     'F': '1111'
 }
 
-
 def to_bit_string(string):
     global HEX_MAP
-    n_string = ''
+    n_string = ""
     
     for char in string:
         n_string += HEX_MAP[char]
 
     return n_string
-
-
-def string_cutter(string, slice_length = 5):
-    sub_strings = []
-
-    segment_cnt = int(floor(len(string) / slice_length))
-
-    for i in range(segment_cnt):
-        sub_strings.append(string[i * slice_length: (i+1) * slice_length])
-
-    return sub_strings
-
-
-def deconstruct_bit_string(bit_string):
-    string_object = {
-        'version': int(bit_string[:3], 2),
-        'id': int(bit_string[3:6], 2),
-        'data': []
-    }
-
-    if string_object['id'] == 4: #means it's a literal
-        string_object['data'] = string_cutter(bit_string[6:])
-        string_object['literal'] = data_parsing(string_object['data'])
-        string_object['value'] = int(string_object['literal'], 2)
-
-    else: #means it's a command
-        string_object['lengthTypeID'] = bit_string[6] == '1'
-
-        if string_object['lengthTypeID']:
-            package_count = int(bit_string[7:18], 2)
-            string_object['packageLength'] = int(floor(len(bit_string[18:])/package_count))
-        
-        else:
-            string_object['packageLength'] = int(bit_string[7:22], 2)
-
-        string_object['packages'] = string_cutter(bit_string[22:], string_object['packageLength'])            
-
-    return string_object
-
-
-def data_parsing(packages):
-    literal = ''
-
-    for i, p in enumerate(packages):
-        if i < (len(packages) - 1):
-            if p[0] != '1':
-                print("faulty package {}".format(p[0]))
-            
-            literal += p[1:]
-        
-        else:
-            if p[0] != '0':
-                print("faulty package {}".format(p[0]))
-            
-            literal += p[1:]
-
-    return literal
 
 
 if __name__ == "__main__":
@@ -182,7 +165,13 @@ if __name__ == "__main__":
             row = row.strip('\n')
             strings.append(row)
             bit_string = to_bit_string(row)
-            data_objects.append(deconstruct_bit_string(bit_string))
+            # print(bit_string)
+            n_package = Package.from_bit_string(bit_string)
+            print(n_package.to_json())
+            # print(row, Package.version_counter(n_package))
+            print(row, n_package.value())
+            data_objects.append(n_package)
 
-    print(strings)
-    print(data_objects)
+    # print(strings)
+    
+    # print(data_objects)
